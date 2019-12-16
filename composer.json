@@ -2,7 +2,7 @@
 	"name": "varrcan/yaturbo",
 	"description": "Generation of rss file for Yandex Turbo pages",
 	"keywords": ["bitrix-module", "yandex", "yandex-turbo"],
-	"type": "bitrix-module",
+	"type": "bitrix-d7-module",
 	"license": "MIT",
 	"authors": [
 		{

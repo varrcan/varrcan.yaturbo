@@ -7,7 +7,7 @@
 
 ## Установка
 ```shell script
-composer install varrcan/yaturbo
+composer require varrcan/yaturbo
 ```
 Активация модуля в админке.
 

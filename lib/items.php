@@ -199,16 +199,19 @@ class Items
     /**
      * Текущий сайт с протоколом
      *
+     * @param bool $port
+     *
      * @return string
      */
-    public function getHost():string
+    public static function getHost($port = false):string
     {
         $server = Context::getCurrent()->getServer();
 
-        $scheme = $server->get('HTTP_X_FORWARDED_PROTO') ?? $server->get('REQUEST_SCHEME');
-        $host   = $server->getHttpHost() ?? $server->getServerName();
+        $scheme     = $server->get('HTTP_X_FORWARDED_PROTO') ?? $server->get('REQUEST_SCHEME');
+        $httpHost   = $server->getHttpHost() ?? $server->getServerName();
+        $schemePort = $scheme === 'https' ? 443 : 80;
 
-        return "$scheme://$host";
+        return $port ? "$scheme://$httpHost:$schemePort" : "$scheme://$httpHost";
     }
 
     /**

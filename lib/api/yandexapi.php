@@ -2,11 +2,21 @@
 
 namespace Varrcan\Yaturbo\Api;
 
+use Bitrix\Main\ArgumentNullException;
+use Bitrix\Main\ArgumentOutOfRangeException;
+use Bitrix\Main\Config\ConfigurationException;
 use Bitrix\Main\Diag\Debug;
+use Bitrix\Main\IO\File;
+use Bitrix\Main\IO\FileNotFoundException;
+use Bitrix\Main\ObjectException;
+use Bitrix\Main\Type\DateTime;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use InvalidArgumentException;
+use Psr\Http\Message\ResponseInterface;
+use Varrcan\Yaturbo\Config;
+use Varrcan\Yaturbo\Items;
 
 /**
  * Class YandexApi
@@ -15,9 +25,12 @@ use InvalidArgumentException;
  */
 class YandexApi
 {
-    public const BASE_URI = 'https://api.webmaster.yandex.net/v4/user';
+    public const BASE_URI = 'https://api.webmaster.yandex.net/v4';
     private $token;
     private $client;
+    private $options = [];
+    private $settings;
+    private $config;
 
     /**
      * Api constructor.
@@ -34,41 +47,179 @@ class YandexApi
             'connect_timeout'  => 30,
             'force_ip_resolve' => 'v4',
         ]);
+
+        $this->config = new Config();
+
+        $this->getModuleSettings();
     }
 
     /**
-     * Стандартные заголовки запроса
+     * Установить токен
      *
-     * @return array
+     * @return YandexApi
      */
-    public function getDefaultHeader()
+    public function setToken()
     {
-        return [
-            'Authorization' => 'OAuth oauth_token',
-        ];
+        $token = $this->settings['token'];
+
+        if (!$token) {
+            throw new ConfigurationException('Invalid token');
+        }
+
+        $this->options['headers']['Authorization'] = "OAuth $token";
+
+        return $this;
+    }
+
+    /**
+     * Установить режим отладки
+     *
+     * @return $this
+     */
+    public function setDebugMode()
+    {
+        $this->options['query']['mode'] = 'DEBUG';
+
+        return $this;
+    }
+
+    /**
+     * Получить настройки модуля
+     *
+     * @return $this
+     */
+    public function getModuleSettings()
+    {
+        $this->settings = $this->config->getConfig();
+
+        if ($this->settings['debug']) {
+            $this->setDebugMode();
+        }
+
+        return $this;
+    }
+
+    /**
+     * Получить ID пользователя Яндекс
+     *
+     * @return array|bool|mixed
+     * @throws GuzzleException
+     * @throws ArgumentNullException
+     * @throws ArgumentOutOfRangeException
+     */
+    public function getYandexUserId()
+    {
+        $yandexUserId = $this->config->getConfig('turbo-user', false);
+
+        if (!$yandexUserId) {
+            $request = $this->sendRequest('GET', '/user');
+
+            if ($request['user_id']) {
+                $yandexUserId = $request['user_id'];
+
+                $this->config->setOption('turbo-user', $yandexUserId, false);
+            }
+        }
+
+        return $yandexUserId ?? false;
+    }
+
+    /**
+     * Получить ссылку на загрузку
+     *
+     * @return bool|string
+     * @throws ArgumentNullException
+     * @throws ArgumentOutOfRangeException
+     * @throws GuzzleException
+     */
+    public function getUploadAddress()
+    {
+        $upload = $this->config->getConfig('turbo-upload');
+
+        if (!$upload || ($upload && $this->isLinkExpired($upload['valid_until']))) {
+            $userId = $this->getYandexUserId();
+            $site   = Items::getHost(true);
+
+            $request = $this->sendRequest('GET', "/$userId/hosts/$site/turbo/uploadAddress");
+
+            if ($request['upload_address']) {
+                $uploadAddress = \str_replace(self::BASE_URI, '', $request['upload_address']);
+
+                $this->config->setOption('turbo-upload', ['upload_address' => $uploadAddress, 'valid_until' => $request['valid_until']]);
+            }
+        } else {
+            $uploadAddress = $upload['upload_address'];
+        }
+
+        return $uploadAddress ?? false;
+    }
+
+    /**
+     * Проверить время жизни ссылки
+     *
+     * @param $dateTime
+     *
+     * @return bool
+     * @throws ObjectException
+     */
+    public function isLinkExpired($dateTime)
+    {
+        $now   = (new DateTime())->getTimestamp();
+        $valid = DateTime::createFromPhp(new \DateTime($dateTime))->getTimestamp();
+
+        return $valid < $now;
+    }
+
+    /**
+     * Отправить файл в Яндекс
+     *
+     * @param File $file
+     *
+     * @return bool|mixed
+     * @throws ArgumentNullException
+     * @throws ArgumentOutOfRangeException
+     * @throws ConfigurationException
+     * @throws GuzzleException
+     * @throws FileNotFoundException
+     */
+    public function uploadRss(File $file)
+    {
+        $rssContent = $file->getContents();
+
+        $this->options['headers']['Content-Type'] = 'application/rss+xml';
+        $this->options['body']                    = $rssContent;
+
+        $url = $this->getUploadAddress();
+
+        if (!$url) {
+            return false;
+        }
+
+        return $this->sendRequest('POST', $url);
     }
 
     /**
      * Отправка запроса
      *
-     * @param      $method
-     * @param      $url
-     * @param null $options
+     * @param       $method
+     * @param       $url
+     * @param array $options
      *
      * @return array|bool
-     * @throws GuzzleException
+     * @throws ConfigurationException
      */
-    public function sendRequest($method, $url, $options = null)
+    public function sendRequest($method, $url, $options = [])
     {
-        $options['headers'] = $this->getDefaultHeader();
+        $this->setToken();
+
+        $options = \array_merge($options, $this->options);
 
         try {
             $response = $this->client->request($method, $url, $options);
-            $body     = $response->getBody()->getContents();
 
-            return $this->parsResponse($body);
-        } catch (RequestException | InvalidArgumentException $e) {
-            Debug::writeToFile($e, '', 'yandex-api.log');
+            return $this->parsResponse($response);
+        } catch (GuzzleException | RequestException | InvalidArgumentException $e) {
+            Debug::writeToFile($e, 'sendRequest', 'yandex-api.log');
         }
 
         return false;
@@ -77,14 +228,26 @@ class YandexApi
     /**
      * Парсинг ответа сервера
      *
-     * @param $data
+     * @param ResponseInterface $response
      *
      * @return array
      */
-    public function parsResponse($data)
+    public function parsResponse(ResponseInterface $response)
     {
-        $data = \GuzzleHttp\json_decode($data, false);
+        $body       = $response->getBody()->getContents();
+        $statusCode = $response->getStatusCode();
 
-        return $data;
+        if ($statusCode !== 200 || $statusCode !== 202) {
+            Debug::writeToFile(
+                [
+                    'code' => $statusCode,
+                    'body' => $body,
+                ],
+                'sendRequest',
+                'yandex-api.log'
+            );
+        }
+
+        return \GuzzleHttp\json_decode($body, true);
     }
 }

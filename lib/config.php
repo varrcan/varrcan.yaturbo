@@ -2,6 +2,8 @@
 
 namespace Varrcan\Yaturbo;
 
+use Bitrix\Main\ArgumentNullException;
+use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Config\Option;
 
 /**
@@ -51,13 +53,23 @@ class Config
     /**
      * Получение настроек
      *
-     * @return array
+     * @param string $optionName
+     *
+     * @param bool   $json
+     *
+     * @return array|bool
+     * @throws ArgumentNullException
+     * @throws ArgumentOutOfRangeException
      */
-    public function getConfig()
+    public function getConfig($optionName = 'turbo-settings', $json = true)
     {
-        $config = Option::get($this->module_id, 'turbo-settings', null);
+        $config = Option::get($this->module_id, $optionName, null);
 
-        return $config ? \GuzzleHttp\json_decode($config, true) : [];
+        if ($json) {
+            $config = \GuzzleHttp\json_decode($config, true);
+        }
+
+        return $config ?? false;
     }
 
     /**

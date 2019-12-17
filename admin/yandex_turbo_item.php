@@ -115,7 +115,7 @@ Asset::getInstance()->addJs('/bitrix/js/varrcan.yaturbo/yandex_turbo_main.js');
                                 <td class="adm-detail-content-cell-r">
                                     <input name="site_url"
                                            size="50"
-                                           value="<?=$formFields['site_url'] ?? $items->getHost()?>"
+                                           value="<?=$formFields['site_url'] ?? $items::getHost()?>"
                                            type="text">
                                 </td>
                             </tr>

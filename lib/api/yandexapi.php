@@ -11,6 +11,7 @@ use Bitrix\Main\IO\FileNotFoundException;
 use Bitrix\Main\ObjectException;
 use Bitrix\Main\Type\DateTime;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use InvalidArgumentException;
@@ -25,7 +26,7 @@ use Varrcan\Yaturbo\Items;
  */
 class YandexApi
 {
-    public const BASE_URI = 'https://api.webmaster.yandex.net/v4';
+    public const BASE_URI = 'https://api.webmaster.yandex.net/v4/';
     private $token;
     private $client;
     private $options = [];
@@ -113,7 +114,7 @@ class YandexApi
         $yandexUserId = $this->config->getConfig('turbo-user', false);
 
         if (!$yandexUserId) {
-            $request = $this->sendRequest('GET', '/user');
+            $request = $this->sendRequest('GET', 'user');
 
             if ($request['user_id']) {
                 $yandexUserId = $request['user_id'];
@@ -141,7 +142,7 @@ class YandexApi
             $userId = $this->getYandexUserId();
             $site   = $this->host ?? Items::getHost(true);
 
-            $request = $this->sendRequest('GET', "/$userId/hosts/$site/turbo/uploadAddress");
+            $request = $this->sendRequest('GET', "user/$userId/hosts/$site/turbo/uploadAddress");
 
             if ($request['upload_address']) {
                 $uploadAddress = \str_replace(self::BASE_URI, '', $request['upload_address']);
@@ -164,7 +165,9 @@ class YandexApi
      */
     public function setHost($host)
     {
-        $this->host = $host;
+        $port = strstr($host, '://', true) === 'http' ? 80 : 443;
+
+        $this->host = \str_replace('//', '', $host) . ":$port";
 
         return $this;
     }
@@ -207,6 +210,7 @@ class YandexApi
         $url = $this->getUploadAddress();
 
         if (!$url) {
+            Debug::writeToFile('Upload address not found', 'uploadRss', 'yandex-api.log');
             return false;
         }
 
@@ -233,7 +237,7 @@ class YandexApi
             $response = $this->client->request($method, $url, $options);
 
             return $this->parsResponse($response);
-        } catch (GuzzleException | RequestException | InvalidArgumentException $e) {
+        } catch (GuzzleException | ClientException | RequestException | InvalidArgumentException $e) {
             Debug::writeToFile($e, 'sendRequest', 'yandex-api.log');
         }
 
@@ -250,7 +254,7 @@ class YandexApi
     public function parsResponse(ResponseInterface $response)
     {
         $body       = $response->getBody()->getContents();
-        $statusCode = $response->getStatusCode();
+        $statusCode = (int)$response->getStatusCode();
 
         if ($statusCode !== 200 || $statusCode !== 202) {
             Debug::writeToFile(
@@ -258,7 +262,7 @@ class YandexApi
                     'code' => $statusCode,
                     'body' => $body,
                 ],
-                'sendRequest',
+                'parsResponse',
                 'yandex-api.log'
             );
         }

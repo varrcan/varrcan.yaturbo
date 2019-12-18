@@ -197,13 +197,13 @@ class Items
     }
 
     /**
-     * Текущий сайт с протоколом
+     * Текущий сайт
      *
-     * @param bool $port
+     * @param bool $hostId
      *
      * @return string
      */
-    public static function getHost($port = false):string
+    public static function getHost($hostId = false):string
     {
         $server = Context::getCurrent()->getServer();
 
@@ -211,7 +211,7 @@ class Items
         $httpHost   = $server->getHttpHost() ?? $server->getServerName();
         $schemePort = $scheme === 'https' ? 443 : 80;
 
-        return $port ? "$scheme://$httpHost:$schemePort" : "$scheme://$httpHost";
+        return $hostId ? "$scheme:$httpHost:$schemePort" : "$scheme://$httpHost";
     }
 
     /**

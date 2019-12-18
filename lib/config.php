@@ -65,7 +65,7 @@ class Config
     {
         $config = Option::get($this->module_id, $optionName, null);
 
-        if ($json) {
+        if ($config && $json) {
             $config = \GuzzleHttp\json_decode($config, true);
         }
 

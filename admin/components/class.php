@@ -188,6 +188,9 @@ class YaTurboList extends BaseList
      */
     public function getFiles($jsonFiles, $elementId)
     {
+        if (!$jsonFiles) {
+            return null;
+        }
         $result  = [];
         $arFiles = \GuzzleHttp\json_decode($jsonFiles);
 

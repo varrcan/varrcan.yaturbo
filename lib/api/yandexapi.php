@@ -31,6 +31,7 @@ class YandexApi
     private $options = [];
     private $settings;
     private $config;
+    private $host;
 
     /**
      * Api constructor.
@@ -138,7 +139,7 @@ class YandexApi
 
         if (!$upload || ($upload && $this->isLinkExpired($upload['valid_until']))) {
             $userId = $this->getYandexUserId();
-            $site   = Items::getHost(true);
+            $site   = $this->host ?? Items::getHost(true);
 
             $request = $this->sendRequest('GET', "/$userId/hosts/$site/turbo/uploadAddress");
 
@@ -152,6 +153,20 @@ class YandexApi
         }
 
         return $uploadAddress ?? false;
+    }
+
+    /**
+     * Установить адрес сайта
+     *
+     * @param $host
+     *
+     * @return $this
+     */
+    public function setHost($host)
+    {
+        $this->host = $host;
+
+        return $this;
     }
 
     /**

@@ -37,10 +37,11 @@ class FeedAgent
 
             if ($item && $item['files']) {
                 $result = [];
+                $api    = new YandexApi();
 
                 foreach ($item['files'] as $file) {
                     $uploadFile = new File(Application::getDocumentRoot() . Items::$workDir . $id . '/' . $file);
-                    $result[]   = (new YandexApi())->uploadRss($uploadFile);
+                    $result[]   = $api->setHost($item['site_url'])->uploadRss($uploadFile);
                 }
 
                 if (\in_array('error_message', $result, true)) {

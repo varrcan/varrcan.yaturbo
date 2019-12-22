@@ -14,11 +14,5 @@
 		"composer/installers": "1.7.*",
 		"webpractik/agent": "1.*",
 		"guzzlehttp/guzzle": "6.*"
-	},
-	"scripts": {
-		"post-package-update": [
-			"@php -r \"copy('bitrix/modules/varrcan.yaturbo/install/js/varrcan.yaturbo/yandex_turbo_list.js', 'bitrix/js/varrcan.yaturbo/yandex_turbo_list.js');\"",
-			"@php -r \"copy('bitrix/modules/varrcan.yaturbo/install/js/varrcan.yaturbo/yandex_turbo_main.js', 'bitrix/js/varrcan.yaturbo/yandex_turbo_main.js');\""
-		]
 	}
 }

@@ -27,8 +27,6 @@ class Config
     public function setOption($name, $option, $serialize = true)
     {
         Option::set($this->module_id, $name, $serialize ? \GuzzleHttp\json_encode($option) : $option);
-
-        $this->response['message'] = self::setNote('Настройки сохранены', 'OK');
     }
 
     /**
@@ -41,6 +39,8 @@ class Config
     {
         if ($fields) {
             $this->setOption('turbo-settings', $fields);
+
+            $this->response['message'] = self::setNote('Настройки сохранены', 'OK');
 
             if ($fields['mode'] === '1') {
                 //TODO: Активировать событие

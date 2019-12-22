@@ -3,20 +3,16 @@
 namespace Varrcan\Yaturbo\Actions;
 
 use Bitrix\Main\ArgumentTypeException;
-use Bitrix\Main\Diag\Debug;
 use Error;
-use Varrcan\Yaturbo\GenerateFeed;
+use Varrcan\Yaturbo\Items;
 use Varrcan\Yaturbo\Orm\YaTurboFeedTable;
-use Webpractik\Agent\AgentTrait;
 
 /**
  * Class FeedManual
  * @package Varrcan\Yaturbo
  */
-class FeedManual
+class FeedManual extends FeedAbstract
 {
-    use AgentTrait;
-
     /**
      * Сгенерировать rss и удалить агент
      *
@@ -24,13 +20,17 @@ class FeedManual
      */
     public function execute($id):void
     {
+        $item = new Items();
+
         try {
-            (new GenerateFeed())->generate($id);
+            $this->generateRss($id);
+            YaTurboFeedTable::update($id, [
+                'status'    => 'RSS-канал сформирован',
+                'is_upload' => false,
+            ]);
         } catch (ArgumentTypeException | Error $e) {
-            YaTurboFeedTable::update($id, ['status' => 'Ошибка']);
-            Debug::writeToFile($e, 'FeedManual', 'yandex-turbo.log');
+            $item::setError($id, $e->getMessage(), $e);
         } finally {
-            YaTurboFeedTable::update($id, ['status' => 'RSS-канал сформирован']);
             \CAgent::RemoveAgent(
                 $this->getAgentName(['execute' => [$id]]),
                 'varrcan.yaturbo'

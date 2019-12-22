@@ -35,6 +35,7 @@ composer require varrcan/yaturbo
 
 
 ## Changelog
+- 1.0.6 Bug fix, переработаны агенты, обработка ошибок API
 - 1.0.5 Bug fix
 - 1.0.4 Fix агентов экспорта файлов
 - 1.0.3 Добавлена выгрузка файлов в Яндекс через API

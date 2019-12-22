@@ -2,24 +2,16 @@
 
 namespace Varrcan\Yaturbo\Actions;
 
-use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentTypeException;
-use Bitrix\Main\Diag\Debug;
-use Bitrix\Main\IO\File;
 use Error;
-use Varrcan\Yaturbo\Api\YandexApi;
 use Varrcan\Yaturbo\Items;
-use Varrcan\Yaturbo\Orm\YaTurboFeedTable;
-use Webpractik\Agent\AgentTrait;
 
 /**
  * Class FeedExport
  * @package Varrcan\Yaturbo
  */
-class FeedExport
+class FeedExport extends FeedAbstract
 {
-    use AgentTrait;
-
     /**
      * Отправить данные в Яндекс и удалить агент
      *
@@ -29,28 +21,16 @@ class FeedExport
      */
     public function execute($id)
     {
+        $item = new Items();
+
         try {
-            $item = (new Items())->getItemConfig($id);
+            $config = $item->getItemConfig($id);
 
-            if ($item && $item['files']) {
-                $result = [];
-                $api    = new YandexApi();
-
-                foreach ($item['files'] as $file) {
-                    $uploadFile = new File(Application::getDocumentRoot() . Items::$workDir . $id . '/' . $file);
-                    $result[]   = $api->setHost($item['site_url'])->uploadRss($uploadFile);
-                }
-
-                if (\in_array('error_message', $result, true)) {
-                    YaTurboFeedTable::update($id, ['status' => 'Ошибка']);
-                    throw new Error(\implode(', ', $result));
-                }
-
-                YaTurboFeedTable::update($id, ['status' => 'Отправлено']);
+            if ($config) {
+                $this->trySend($id, $config);
             }
         } catch (ArgumentTypeException | Error $e) {
-            YaTurboFeedTable::update($id, ['status' => 'Ошибка']);
-            Debug::writeToFile($e, 'FeedManual', 'yandex-turbo.log');
+            $item::setError($id, $e->getMessage(), $e);
         } finally {
             \CAgent::RemoveAgent(
                 $this->getAgentName(['execute' => [$id]]),

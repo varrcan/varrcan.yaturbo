@@ -17,7 +17,8 @@ use Bitrix\Main\ORM\Query\Join;
 use Bitrix\Main\SiteTable;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Type\DateTime;
-use InvalidArgumentException;
+use Exception;
+use GuzzleHttp\Exception\InvalidArgumentException;
 use Varrcan\Yaturbo\Actions\FeedAgent;
 use Varrcan\Yaturbo\Actions\FeedExport;
 use Varrcan\Yaturbo\Actions\FeedManual;
@@ -34,7 +35,6 @@ use Webpractik\Agent\AgentTrait;
 class Items
 {
     use AgentTrait;
-
     public static $workDir = '/upload/ya_turbo/';
     public $module_id = 'varrcan.yaturbo';
     public $response = [
@@ -85,7 +85,7 @@ class Items
             } else {
                 $this->response = ['error' => self::setNote($result->getErrorMessages(), 'ERROR')];
             }
-        } catch (\Exception | InvalidArgumentException $e) {
+        } catch (Exception | InvalidArgumentException $e) {
             Debug::writeToFile($e, 'saveItem', 'yandex-turbo.log');
             $this->response = ['error' => self::setNote($e->getMessage(), 'ERROR')];
         } finally {
@@ -346,7 +346,7 @@ class Items
      *
      * @param $id
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function deleteItem($id)
     {
@@ -468,6 +468,33 @@ class Items
         YaTurboFeedTable::update($params['id'], ['type' => $params['type']]);
 
         $this->sendResponse();
+    }
+
+    /**
+     * Сохранить ошибку
+     *
+     * @param           $id
+     * @param null      $error
+     * @param Exception $exception
+     * @param string    $method
+     * @param bool      $saveToDb
+     *
+     * @throws Exception
+     */
+    public static function setError($id, $error = null, $exception = null, $method = '', $saveToDb = true)
+    {
+        if ($exception) {
+            $exceptionMessage = $exception->getMessage();
+        }
+
+        if ($saveToDb) {
+            YaTurboFeedTable::update($id, [
+                'status' => 'Ошибка',
+                'errors' => $error ?? $exceptionMessage ?? '',
+            ]);
+        }
+
+        Debug::writeToFile($exception ?? $error, $method, 'yandex-turbo.log');
     }
 
     /**

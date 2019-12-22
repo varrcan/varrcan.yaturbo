@@ -45,6 +45,9 @@ class YaTurboFeedTable extends Entity\DataManager
             (new BooleanField('is_upload'))
                 ->configureRequired(false)
                 ->configureDefaultValue(false),
+            (new StringField('task_id'))
+                ->configureRequired(false)
+                ->configureDefaultValue(null), // json Идентификаторы задач на загрузку RSS-канала
             (new TextField('errors'))
                 ->configureRequired(false)
                 ->configureDefaultValue(null),

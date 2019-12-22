@@ -40,8 +40,7 @@ $APPLICATION->SetTitle($formFields['id'] ? 'Редактирование кан�
 
 require($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_after.php');
 
-\CJSCore::Init(['jquery']);
-Asset::getInstance()->addJs('/bitrix/js/varrcan.yaturbo/yandex_turbo_main.js');
+\CJSCore::Init(['varrcan_yaturbo']);
 ?>
 
     <div class="yandex-turbo-response" style="display:none"></div>

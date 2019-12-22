@@ -12,9 +12,8 @@
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
 }
-CJSCore::Init('jquery');
+CJSCore::Init('varrcan_yaturbo');
 Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/main/utils.js');
-Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/varrcan.yaturbo/yandex_turbo_list.js');
 $APPLICATION->SetAdditionalCSS('/bitrix/css/main/grid/webform-button.css');
 ?>
 <div class="yandex-turbo-response" style="display:none"></div>

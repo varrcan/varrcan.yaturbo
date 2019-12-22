@@ -6,6 +6,7 @@ use Bitrix\Main\Entity\ExpressionField;
 use Bitrix\Main\Entity\Query\Join;
 use Bitrix\Main\Entity\ReferenceField;
 use Bitrix\Main\UserTable;
+use GuzzleHttp\Exception\InvalidArgumentException;
 use Varrcan\Yaturbo\Orm\YaTurboFeedTable;
 
 if (!\defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
@@ -169,7 +170,7 @@ class YaTurboList extends BaseList
         $arModify = [
             'active'    => $arItem['active'] ? 'Активен' : 'Деактивирован',
             'is_upload' => $arItem['is_upload'] ? 'Да' : 'Нет',
-            'errors'    => $arItem['errors'] ? '<span style="color: red">Есть ошибки</span>' : '<span style="color: green">Нет ошибок</span>',
+            'errors'    => $this->getErrors($arItem['errors']),
             'iblock_id' => $iblockInfo['NAME'] ?? '-',
             'type'      => $arItem['type'] === 'agent' ? 'Автоматический' : 'Ручной',
             'files'     => $this->getFiles($arItem['files'], $arItem['id']),
@@ -199,6 +200,29 @@ class YaTurboList extends BaseList
         }
 
         return \implode("\n", $result);
+    }
+
+    /**
+     * Получить ошибки
+     *
+     * @param $errors
+     *
+     * @return mixed|string
+     */
+    public function getErrors($errors)
+    {
+        if (!$errors) {
+            return '<span style="color: green">Нет ошибок</span>';
+        }
+
+        try {
+            $errors = \GuzzleHttp\json_decode($errors);
+            $errors = \implode("\n", $errors);
+        } catch (InvalidArgumentException $e) {
+            return '<span style="color: red">Есть ошибки</span>';
+        }
+
+        return '<span style="color: red">' . $errors . '</span>';
     }
 
     /**
